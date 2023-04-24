@@ -7,7 +7,7 @@
 
     <script type="text/javascript">
         Rally.onReady(function () {
-                // Custom Rally App that displays Time Entries summed by Task/User/Week 1 and Week 2 in a grid and 
+                // Custom Rally App that displays Time Entries summed by Task/User Week 1 and Week 2 in a grid and 
 // filter by Iteration.
 //
 
@@ -21,9 +21,7 @@ Ext.define('CustomApp', {
   myStore: undefined,
 
   launch: function() {
-
-    console.log('Sum of time Entries by Task and week');     
-
+    console.log('Sum of time Entries by User/Task and week');     
     this.pulldownContainer = Ext.create('Ext.container.Container', {    
       id: 'pulldown-container-id',
       layout: {
@@ -33,7 +31,6 @@ Ext.define('CustomApp', {
     });
 
     this.add(this.pulldownContainer); 
-
     this._loadIterations();
   },
 
@@ -44,10 +41,10 @@ Ext.define('CustomApp', {
         labelAlign: 'right',
         width: 300,
         listeners: {
-          ready: function(combobox) {             
+          ready: function() {             
                this._loadData();
          },
-          select: function(combobox, records) {   
+          select: function() {   
                this._loadData();
          },
          scope: this
@@ -60,53 +57,44 @@ Ext.define('CustomApp', {
     // Get data from Rally
   _loadData: function() {
 
+    // get, calculate, and adjust the applicable dates
+    // must be GMT form (yyyy-MM-ddT00:00:00Z
+    // shift the timebox time to UTC 
     var startDate = this.iterComboBox.getRecord().get('StartDate');    
     var myStartDate = Rally.util.DateTime.toIsoString(startDate).replace(/T.*$/,'T00:00:00.000Z');
-  //  console.log ('MyStartDate  ', myStartDate);
-
+  
     var endDate = this.iterComboBox.getRecord().get('EndDate');
     var myEndDate = Rally.util.DateTime.toIsoString(endDate).replace(/T.*$/,'T00:00:00.000Z');
-  //  console.log ('MyEndDate  ', myEndDate);
-
+  
     var week2 = Rally.util.DateTime.add(new Date(startDate), "day", 7);  
-  //  console.log("Week 2 + 7", week2.getTime());
     this.week2Start = Rally.util.DateTime.toIsoString(week2).replace(/T.*$/,'T00:00:00.000Z');
     this.week2Start = new Date(this.week2Start).getTime();
- //   console.log("myWeek2 + 7 no time", this.week2Start);
- //   console.log("Week 2 = ", this.week2Start);
-
-    //GMT (yyyy-MM-ddT00:00:00Z
-    //shift the timebox time to UTC 
+ 
     var startDateFilter = Ext.create('Rally.data.QueryFilter', {
       property: 'WeekStartDate',
       operator: '>=',
       value: myStartDate
     });
     startDateFilter.toString();
- //   console.log('startDateFilter data: ' + startDateFilter);
-
+ 
     var endDateFilter = Ext.create('Rally.data.QueryFilter', {
       property: 'WeekStartDate',
       operator: '<',
       value: myEndDate
     });
     endDateFilter.toString();
- //   console.log('End Filter data: ' + endDateFilter);
-    
-    
+     
     // if store exists, just load new data
     if (this.timeStore) {
-//      console.log('time entry store exists');
       this.timeStore.setFilter([startDateFilter, endDateFilter]);
       this.timeStore.load();
 
-    // create store
+    // otherwise create store
     } else {
-//      console.log('creating time entry store');
       this.timeStore = Ext.create('Rally.data.wsapi.Store', {     
         model: 'TimeEntryItem',
         pageSize: 100,
-        autoLoad: true,     // <----- Don't forget to set this to true! heh
+        autoLoad: true,     // <----- Don't forget to set this to true to load data 
         filters: [startDateFilter, endDateFilter],
         listeners: {
             load: this._onTimeEntryItemLoaded,
@@ -118,19 +106,12 @@ Ext.define('CustomApp', {
   },
 
   _onTimeEntryItemLoaded: function(store, data){
-  
-//    console.log(data);
- //   console.log ("week 2", this.week2Start);
 
     var timeEntryItems = [];
     var pendingValues = data.length;
-  
     var index;
-
+    // gather up all the timeentries, remove dupes
     Ext.Array.each(data, function(timeEntryItem) {
-
-//        console.log("time entry item  = ", timeEntryItem);
-
         index = timeEntryItem.get('User')._refObjectName + 
                     timeEntryItem.get('Task').FormattedID + 
                         timeEntryItem.get('Task').c_ClarityProject;
@@ -146,13 +127,11 @@ Ext.define('CustomApp', {
             TimeSpent: timeEntryItem.get('Task').TimeSpent,
             WeekStartDate: timeEntryItem.data.WeekStartDate
         };
-//        console.log("timeEntryItem = ", timeEntryItem);
-//        console.log("t = ", t);
+        // add the time values per each timeentry to be processed later  
         var values = timeEntryItem.getCollection('Values');
         values.load({
            fetch: ['Hours', 'DateVal'],
-           //autoLoad: true,
-           callback: function(records, operation, success){
+           callback: function(records){
             Ext.Array.each(records, function(value){
                 t.Values.push({Hours: value.get('Hours'),
                                 DateVal: value.get('DateVal')
@@ -160,8 +139,6 @@ Ext.define('CustomApp', {
             }, this);
                 --pendingValues;
                 if (pendingValues === 0) {
-  //                console.log("pending values = 0");
-  //                console.log("timeentryitems", timeEntryItems);
                     this._createGrid(timeEntryItems);
                 }
             },
@@ -175,19 +152,17 @@ Ext.define('CustomApp', {
 
  _createGrid: function(timeEntryItems) {
 
-// consolidate the time values and remove dup entries
-
   var hours = 0;
   var week1Hours = 0;
   var week2Hours = 0;
   var dateVal;
   var finalData = [];
- 
+  // process the time entries and values into a single line for each unique key
   Ext.Array.each(timeEntryItems, function(record){
     var entry = {
       key : record.key,
       User: record.User,
-      GroupData: record.User + "  " + record.ClarityProject,
+      GroupData: record.User + "  " + record.ClarityProject, // key is User and CLarity project
       ClarityProject: record.ClarityProject,
       FormattedID: record.FormattedID,
       Task : record.Task,
@@ -197,34 +172,22 @@ Ext.define('CustomApp', {
     };
     if ( record.Values.length > 0 ) {
       Ext.Array.each(record.Values, function(value){
-//        dateVal = value.DateVal;
-//        dateVal = new Date(dateVal).getTime();
-//        console.log("DateVal = ", dateVal);
         hours += value.Hours;
-       
       }, this);
       dateVal = new Date(record.WeekStartDate).getTime();
- //     console.log("Dateval = ", dateVal);
- //     console.log("week2startdate =  = ", this.week2Start);
 
       if (dateVal >= this.week2Start) {
         week2Hours = hours;
-//              console.log("in week 2");
-//              console.log("week 2 hours", week2Hours);
       }
       else {
         week1Hours = hours;
-//              console.log("in week 1");
-//              console.log("week 1 hours", week1Hours);
       }
     }
 
     var location = finalData.findIndex(entry => entry.key === record.key);
-//      console.log("Index", index);
-//      console.log("Location = ", location);
       if ( location > -1 ) {
-//          console.log("Found existing Entry for" , index);
-          //update week 1 and week 2 here
+          //if an entry already exists
+          // just update week 1 and week 2 totals
         finalData[location].Week1 += week1Hours;
         finalData[location].Week2 += week2Hours;
       }
@@ -235,32 +198,16 @@ Ext.define('CustomApp', {
           finalData.push(entry);
         }
       }
-//        console.log("t = ", t);
         week1Hours = 0;
         week2Hours = 0;
         hours = 0;
   }, this);
-
-
-  console.log("FinalData = ", finalData);
-
-//  if (this.myStore) {
-//    console.log('store exists');
-//    this.myStore.load();
-
-  // create store
-//  } else {
-    console.log('final data store does not exist');
     this.myStore = Ext.create('Rally.data.custom.Store', {
       data: finalData,
-//      groupField: 'ClarityProject',
       groupField: 'GroupData',
       pageSize: 100,  
       autoload: true
     }, this);
-//  }
-
-  console.log("final data custom store", this.myStore);
   
   if (!this.grid) {
     console.log("create grid");
@@ -291,7 +238,7 @@ Ext.define('CustomApp', {
             text: 'Week 2', dataIndex: 'Week2',
           summaryType: 'sum'
        },
-       {
+       {    // put this out just for cross ref of the task total hours.
             text: 'Time Spent', dataIndex: 'TimeSpent',
             summaryType: 'sum'
           
@@ -301,7 +248,6 @@ Ext.define('CustomApp', {
     this.add(this.grid);
   }
   else {
-    console.log("grid exists");
     this.grid.reconfigure(this.myStore);
   }
 },
