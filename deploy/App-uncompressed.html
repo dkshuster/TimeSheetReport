@@ -214,6 +214,7 @@ Ext.define('CustomApp', {
     this.grid = Ext.create('Rally.ui.grid.Grid', {
       store: this.myStore,
       features: [{ftype:'groupingsummary'}],
+      showRowActionsColumn: false,
       columnCfgs: [
         {
            text: 'User', dataIndex: 'User',
