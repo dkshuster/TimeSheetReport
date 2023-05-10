@@ -41,11 +41,13 @@ Ext.define('CustomApp', {
         labelAlign: 'right',
         width: 300,
         listeners: {
-          ready: function() {             
+          ready: function() {       
+              console.log("in ready listener");      
                this._loadData();
          },
           select: function() {   
-               this._loadData();
+            console.log("in select listener");      
+            this._loadData();
          },
          scope: this
        }
@@ -100,7 +102,7 @@ Ext.define('CustomApp', {
             load: this._onTimeEntryItemLoaded,
             scope: this
         },
-        fetch: ['Task', 'TimeSpent', 'FormattedID', 'User', 'Values', 'WeekStartDate', 'ClarityProject']   // Look in the WSAPI docs online to see all fields available!
+        fetch: ['Task', 'TimeSpent', 'FormattedID', 'User', 'Values', 'WeekStartDate', 'ClarityProjectTask']   // Look in the WSAPI docs online to see all fields available!
       });
     }
   },
@@ -114,11 +116,11 @@ Ext.define('CustomApp', {
     Ext.Array.each(data, function(timeEntryItem) {
         index = timeEntryItem.get('User')._refObjectName + 
                     timeEntryItem.get('Task').FormattedID + 
-                        timeEntryItem.get('Task').c_ClarityProject;
+                        timeEntryItem.get('Task').c_ClarityProjectTask;
         var t  = {
             key : index,
             User: timeEntryItem.get('User')._refObjectName,
-            ClarityProject: timeEntryItem.get('Task').c_ClarityProject,
+            ClarityProjectTask: timeEntryItem.get('Task').c_ClarityProjectTask,
             FormattedID: timeEntryItem.get('Task').FormattedID,
             Task : timeEntryItem.get('Task')._refObjectName,
             Week1 : 0,
@@ -162,8 +164,8 @@ Ext.define('CustomApp', {
     var entry = {
       key : record.key,
       User: record.User,
-      GroupData: record.User + "  " + record.ClarityProject, // key is User and CLarity project
-      ClarityProject: record.ClarityProject,
+      GroupData: record.User + "  " + record.ClarityProjectTask, // key is User and CLarity project
+      ClarityProjectTask: record.ClarityProjectTask,
       FormattedID: record.FormattedID,
       Task : record.Task,
       Week1 : 0,
@@ -223,7 +225,7 @@ Ext.define('CustomApp', {
            }
         },
         {
-           text: 'Clarity Project', dataIndex: 'ClarityProject'
+           text: 'Clarity Project Task', dataIndex: 'ClarityProjectTask'
         },
         {
             text: 'Task ID', dataIndex: 'FormattedID'
