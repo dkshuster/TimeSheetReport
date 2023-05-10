@@ -76,10 +76,17 @@ Ext.define('CustomApp', {
       value: myEndDate
     });
     endDateFilter.toString();
+
+    var tasksOnlyFilter = Ext.create('Rally.data.QueryFilter', {
+      property: 'TaskDisplayString',
+      operator: '!=',
+      value: ''
+    });
+    tasksOnlyFilter.toString();
      
     // if store exists, just load new data
     if (this.timeStore) {
-      this.timeStore.setFilter([startDateFilter, endDateFilter]);
+      this.timeStore.setFilter([startDateFilter, endDateFilter, tasksOnlyFilter]);
       this.timeStore.load();
 
     // otherwise create store
