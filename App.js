@@ -33,11 +33,11 @@ Ext.define('CustomApp', {
         width: 300,
         listeners: {
           ready: function() {       
-              console.log("in ready listener");      
+//              console.log("in ready listener");      
                this._loadData();
          },
           select: function() {   
-            console.log("in select listener");      
+//            console.log("in select listener");      
             this._loadData();
          },
          scope: this
@@ -95,14 +95,15 @@ Ext.define('CustomApp', {
         model: 'TimeEntryItem',
         pageSize: 100,
         autoLoad: true,     // <----- Don't forget to set this to true to load data 
-        filters: [startDateFilter, endDateFilter],
+        filters: [startDateFilter, endDateFilter, tasksOnlyFilter],
         listeners: {
             load: this._onTimeEntryItemLoaded,
             scope: this
         },
-        fetch: ['Task', 'TimeSpent', 'FormattedID', 'User', 'Values', 'WeekStartDate', 'ClarityProjectTask']   // Look in the WSAPI docs online to see all fields available!
+        fetch: ['Task', 'TimeSpent', 'FormattedID', 'User', 'Values', 'WeekStartDate', 'ClarityProjectTask','TaskDisplayString']   // Look in the WSAPI docs online to see all fields available!
       });
     }
+//    console.log("TimeStore = ", this.timeStore );
   },
 
   _onTimeEntryItemLoaded: function(store, data){
@@ -111,10 +112,15 @@ Ext.define('CustomApp', {
     var pendingValues = data.length;
     var index;
     // gather up all the timeentries, remove dupes
+//    console.log("Data = ", data);
+
     Ext.Array.each(data, function(timeEntryItem) {
+//      console.log("TimeEntryITem = ", timeEntryItem);
+      if (timeEntryItem.data.Task !== null ) {
         index = timeEntryItem.get('User')._refObjectName + 
                     timeEntryItem.get('Task').FormattedID + 
                         timeEntryItem.get('Task').c_ClarityProjectTask;
+//            console.log(" Index = ", index);
         var t  = {
             key : index,
             User: timeEntryItem.get('User')._refObjectName,
@@ -145,6 +151,10 @@ Ext.define('CustomApp', {
             scope: this
         });
         timeEntryItems.push(t);
+      }
+      else {
+        --pendingValues;
+      }
         
     }, this);
     this._createGrid(timeEntryItems);
@@ -210,7 +220,7 @@ Ext.define('CustomApp', {
     }, this);
   
   if (!this.grid) {
-    console.log("create grid");
+//    console.log("create grid");
     this.grid = Ext.create('Rally.ui.grid.Grid', {
       store: this.myStore,
       features: [{ftype:'groupingsummary'}],
